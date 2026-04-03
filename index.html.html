@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>DeepTalk</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════
+   THEME TOKENS
+═══════════════════════════════════════════════ */
+:root {
+  --pur:#9b5de5; --pur2:#7c44c8; --pur3:#5a3090; --pur4:#2a1550; --pur5:#170b30;
+  --teal:#5ee7d0; --teal2:#3dcfbc; --teal3:#1a7a6e; --teal4:#0d2a28;
+  --blue:#5b8ff9; --amber:#f4a72a; --red:#e24b4a; --green:#3dcf90;
+  --font:'Space Grotesk',sans-serif; --mono:'JetBrains Mono',monospace;
+  --r:12px; --r2:20px;
+}
+[data-theme="dark"] {
+  --bg:#06040f; --bg2:#0b0818; --bg3:#110d22; --bg4:#17112e; --bg5:#1e1640;
+  --txt:#eae6ff; --txt2:#b8aee0; --txt3:#7060a8; --txt4:#3a2c60;
+  --bdr:#2a1f50; --bdr2:#1a1238;
+  --card-bg:#110d22; --input-bg:#110d22; --nav-bg:rgba(9,6,22,.97);
+  --hex-stroke:#2a1f50;
+  --shadow:0 0 100px rgba(155,93,229,.18);
+}
+[data-theme="light"] {
+  --bg:#f8f7ff; --bg2:#ffffff; --bg3:#f0eeff; --bg4:#e8e4ff; --bg5:#ddd8ff;
+  --txt:#12083a; --txt2:#3a2c70; --txt3:#7060a8; --txt4:#9080c0;
+  --bdr:#c8c0e8; --bdr2:#ddd8f8;
+  --card-bg:#ffffff; --input-bg:#f0eeff; --nav-bg:rgba(255,255,254,.97);
+  --hex-stroke:#c8c0e8;
+  --shadow:0 0 60px rgba(155,93,229,.08);
+}
+
+/* ═══════════════════════════════════════════════
+   RESET + BASE
+═══════════════════════════════════════════════ */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;background:var(--bg);}
+body{font-family:var(--font);color:var(--txt);display:flex;align-items:center;justify-content:center;transition:background .3s,color .3s;}
+
+/* ═══════════════════════════════════════════════
+   PHONE SHELL
+═══════════════════════════════════════════════ */
+#app{
+  width:min(390px,100vw); height:min(844px,100vh);
+  background:var(--bg2); border-radius:min(44px,4vw);
+  overflow:hidden; position:relative; display:flex; flex-direction:column;
+  border:1.5px solid var(--bdr); box-shadow:var(--shadow);
+  transition:background .3s,border-color .3s;
+}
+
+/* STATUS BAR */
+.sbar{
+  flex-shrink:0; height:44px; display:flex; align-items:center;
+  justify-content:space-between; padding:0 24px; z-index:10; position:relative;
+}
+.sbar-time{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--txt3);}
+.sbar-right{display:flex;align-items:center;gap:10px;}
+
+/* THEME TOGGLE */
+.theme-btn{
+  background:none;border:none;cursor:pointer;
+  width:28px;height:28px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--txt3);transition:background .2s,color .2s;
+  flex-shrink:0;
+}
+.theme-btn:active{background:var(--bg3);}
+
+/* HEX BG */
+.hex-bg{
+  position:absolute;top:0;left:0;right:0;height:200px;pointer-events:none;overflow:hidden;
+  background:radial-gradient(ellipse at 50% -10%,rgba(155,93,229,.15) 0%,transparent 65%);
+  transition:background .3s;
+}
+[data-theme="light"] .hex-bg{background:radial-gradient(ellipse at 50% -10%,rgba(155,93,229,.08) 0%,transparent 65%);}
+.hex-bg svg{position:absolute;top:0;left:0;width:100%;height:100%;opacity:.25;}
+[data-theme="light"] .hex-bg svg{opacity:.15;}
+
+/* ═══════════════════════════════════════════════
+   SCREENS
+═══════════════════════════════════════════════ */
+.screen{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  opacity:0;pointer-events:none;overflow:hidden;
+  transition:opacity .26s ease,transform .26s ease;transform:translateX(20px);
+}
+.screen.active{opacity:1;pointer-events:all;transform:none;}
+.screen.bx{transform:translateX(20px);opacity:0;}
+.screen.fx{transform:translateX(-20px);opacity:0;}
+
+/* SCROLL */
+.scr{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 20px 92px;-webkit-overflow-scrolling:touch;transition:background .3s;}
+.scr::-webkit-scrollbar{display:none;}
+
+/* NAV */
+#nav{
+  position:absolute;bottom:0;left:0;right:0;height:78px;
+  background:var(--nav-bg);border-top:1px solid var(--bdr2);
+  display:flex;align-items:center;justify-content:space-around;
+  padding:0 8px 10px;backdrop-filter:blur(20px);z-index:300;
+  transition:background .3s,border-color .3s;
+}
+.nb{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 14px;border-radius:10px;cursor:pointer;
+  background:none;border:none;color:var(--txt4);
+  font-family:var(--font);font-size:10px;font-weight:500;
+  transition:color .2s;
+}
+.nb.on{color:var(--pur);}
+.nb svg{width:20px;height:20px;}
+.nb-mic{
+  width:52px;height:52px;border-radius:50%;
+  background:var(--pur);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;border:none;margin-top:-16px;flex-shrink:0;
+  box-shadow:0 0 22px rgba(155,93,229,.45);transition:all .2s;
+}
+.nb-mic:active{transform:scale(.93);}
+.nb-mic.live{background:var(--red);animation:prec 1.4s infinite;}
+@keyframes prec{0%,100%{box-shadow:0 0 22px rgba(226,75,74,.35);}50%{box-shadow:0 0 38px rgba(226,75,74,.7);}}
+
+/* ═══════════════════════════════════════════════
+   TYPOGRAPHY
+═══════════════════════════════════════════════ */
+.h1{font-size:22px;font-weight:700;letter-spacing:-.5px;color:var(--txt);}
+.h2{font-size:16px;font-weight:600;letter-spacing:-.2px;color:var(--txt);}
+.lbl{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--txt4);letter-spacing:2px;text-transform:uppercase;margin:18px 0 8px;}
+
+/* ═══════════════════════════════════════════════
+   COMPONENTS
+═══════════════════════════════════════════════ */
+.card{background:var(--card-bg);border:1px solid var(--bdr2);border-radius:var(--r);padding:16px;margin-bottom:12px;transition:background .3s,border-color .3s;}
+.card-hi{background:rgba(155,93,229,.08);border:1px solid var(--pur);border-left:3px solid var(--pur);}
+.card-teal{background:rgba(94,231,208,.06);border:1px solid var(--teal3);}
+.card-pur{background:rgba(155,93,229,.1);border:1px solid var(--pur3);}
+.card-success{background:rgba(61,207,144,.07);border:1px solid #1a6040;}
+
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:13px 20px;border-radius:var(--r);border:none;cursor:pointer;
+  font-family:var(--font);font-size:14px;font-weight:600;
+  transition:all .18s;width:100%;
+}
+.btn:active{transform:scale(.97);}
+.btn-p{background:var(--pur);color:#fff;box-shadow:0 4px 18px rgba(155,93,229,.3);}
+.btn-p:active{background:var(--pur2);}
+.btn-s{background:var(--bg4);color:var(--txt2);border:1px solid var(--bdr);}
+.btn-g{background:transparent;color:var(--txt3);border:1px solid var(--bdr2);}
+.btn-red{background:rgba(226,75,74,.12);color:var(--red);border:1px solid rgba(226,75,74,.3);}
+.btn-sm{padding:9px 16px;font-size:12px;width:auto;border-radius:10px;}
+
+.inp{
+  width:100%;padding:12px 16px;background:var(--input-bg);
+  border:1px solid var(--bdr2);border-radius:var(--r);
+  color:var(--txt);font-family:var(--font);font-size:14px;
+  margin-bottom:12px;outline:none;transition:border-color .2s,background .3s;
+}
+.inp:focus{border-color:var(--pur);}
+.inp::placeholder{color:var(--txt4);}
+
+.logo{font-family:var(--mono);font-weight:700;font-size:18px;letter-spacing:-.5px;}
+.logo .d{color:var(--pur);}.logo .t{color:var(--teal);}
+
+.hdr{padding:10px 20px 0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:relative;z-index:10;}
+.back-btn{background:none;border:none;color:var(--txt3);cursor:pointer;padding:6px;border-radius:8px;transition:background .15s;}
+.back-btn:active{background:var(--bg3);}
+
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.3px;white-space:nowrap;}
+.p-pur{background:rgba(155,93,229,.15);color:var(--pur);border:1px solid rgba(155,93,229,.35);}
+.p-teal{background:rgba(94,231,208,.1);color:var(--teal2);border:1px solid rgba(94,231,208,.3);}
+.p-red{background:rgba(226,75,74,.12);color:var(--red);border:1px solid rgba(226,75,74,.3);}
+.p-green{background:rgba(61,207,144,.1);color:var(--green);border:1px solid rgba(61,207,144,.3);}
+.p-amber{background:rgba(244,167,42,.1);color:var(--amber);border:1px solid rgba(244,167,42,.3);}
+.p-dim{background:var(--bg4);color:var(--txt3);border:1px solid var(--bdr2);}
+
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:700;flex-shrink:0;}
+.av-p{background:rgba(155,93,229,.15);color:var(--pur);border:1px solid rgba(155,93,229,.3);}
+.av-t{background:rgba(94,231,208,.1);color:var(--teal2);border:1px solid rgba(94,231,208,.25);}
+.av-b{background:rgba(91,143,249,.1);color:var(--blue);border:1px solid rgba(91,143,249,.25);}
+
+/* WAVE */
+.wb{width:3px;border-radius:2px;background:var(--pur);animation:wv 1.1s ease-in-out infinite;transition:height .15s;}
+.wb:nth-child(even){background:var(--teal);animation-delay:.16s;}
+.wb:nth-child(3n){animation-delay:.32s;}
+.wb:nth-child(5n){animation-delay:.08s;}
+.wb.idle{animation:none!important;height:3px!important;opacity:.2;}
+@keyframes wv{0%,100%{transform:scaleY(.2);}50%{transform:scaleY(1);}}
+
+/* TRANSCRIPT LINE */
+.txl{margin-bottom:14px;animation:fi .3s ease;}
+.txsp{display:flex;align-items:center;gap:6px;margin-bottom:3px;}
+.txdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.txname{font-family:var(--mono);font-size:11px;font-weight:700;}
+.txtime{font-family:var(--mono);font-size:10px;color:var(--txt4);margin-left:4px;}
+.txtext{font-size:13px;color:var(--txt2);line-height:1.55;padding-left:13px;}
+.txppt{background:rgba(155,93,229,.1);border-left:2px solid var(--pur);border-radius:0 8px 8px 0;padding:8px 10px;margin-top:4px;}
+.ppt-lbl{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--pur);letter-spacing:1px;margin-bottom:2px;}
+
+/* INTERIM transcript (greyed out while speaking) */
+.tx-interim{font-size:13px;color:var(--txt4);line-height:1.55;padding-left:13px;font-style:italic;min-height:20px;}
+
+/* TOGGLE */
+.tr{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--bdr2);}
+.tr:last-child{border-bottom:none;}
+.tl{font-size:13px;color:var(--txt2);}
+.tog{width:42px;height:24px;border-radius:12px;position:relative;cursor:pointer;border:none;transition:background .2s;flex-shrink:0;}
+.tog.on{background:var(--pur);}.tog.off{background:var(--bg4);}
+.tog-t{position:absolute;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .18s;}
+.tog.on .tog-t{left:21px;}.tog.off .tog-t{left:3px;}
+
+/* STEP DOTS */
+.sdots{display:flex;gap:5px;justify-content:center;margin:10px 0 18px;}
+.sd{width:7px;height:7px;border-radius:50%;background:var(--bdr);transition:background .3s;}
+.sd.done{background:var(--pur3);}.sd.cur{background:var(--pur);box-shadow:0 0 8px var(--pur);}
+
+/* MEETING CARD */
+.mc{
+  background:var(--card-bg);border:1px solid var(--bdr2);border-radius:var(--r);
+  padding:14px 16px;cursor:pointer;
+  transition:border-color .2s,transform .15s,background .3s;
+}
+.mc:active{transform:scale(.985);}
+.mc.sel{border-color:var(--pur3);background:var(--bg4);}
+.mc-wrap{position:relative;overflow:hidden;margin-bottom:8px;border-radius:var(--r);}
+.mc-del{
+  position:absolute;right:0;top:0;bottom:0;width:70px;
+  background:var(--red);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-family:var(--mono);font-size:10px;color:white;font-weight:700;
+  transform:translateX(70px);transition:transform .2s;
+}
+.mc-wrap.sw .mc-del{transform:none;}.mc-wrap.sw .mc{transform:translateX(-70px);}
+
+/* ACTION ITEM */
+.ai-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:var(--bg4);border-radius:var(--r);border:1px solid var(--bdr2);margin-bottom:8px;cursor:pointer;transition:opacity .2s,background .3s;}
+.ai-item.done{opacity:.4;}
+.ai-chk{width:18px;height:18px;border-radius:4px;border:1.5px solid var(--pur3);background:var(--pur5);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.ai-chk.on{background:var(--pur);border-color:var(--pur);}
+.ai-txt{font-size:13px;color:var(--txt2);line-height:1.4;}
+.ai-own{font-family:var(--mono);font-size:10px;color:var(--pur);margin-top:3px;}
+.ai-dl{font-family:var(--mono);font-size:10px;color:var(--txt4);margin-top:1px;}
+
+/* SHARE CHANNEL */
+.sch{display:flex;align-items:center;gap:12px;padding:13px 16px;background:var(--card-bg);border-radius:var(--r);border:1px solid var(--bdr2);margin-bottom:8px;cursor:pointer;transition:border-color .2s,transform .15s,background .3s;}
+.sch:active{transform:scale(.98);border-color:var(--pur3);}
+.sch-ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;font-size:14px;}
+.sch-nm{font-size:14px;font-weight:600;color:var(--txt);}
+.sch-ds{font-size:11px;color:var(--txt4);margin-top:1px;}
+
+/* CHAT */
+.cb-u{align-self:flex-end;max-width:82%;background:rgba(155,93,229,.15);border:1px solid rgba(155,93,229,.3);border-radius:16px 16px 4px 16px;padding:10px 14px;font-size:13px;color:var(--txt);line-height:1.5;animation:fi .22s ease;}
+.cb-a{align-self:flex-start;max-width:88%;background:var(--card-bg);border:1px solid var(--bdr2);border-left:2px solid var(--teal);border-radius:4px 16px 16px 16px;padding:10px 14px;font-size:13px;color:var(--txt2);line-height:1.5;animation:fi .22s ease;transition:background .3s;}
+.sq{padding:10px 14px;background:var(--bg4);border:1px solid var(--bdr2);border-radius:var(--r);font-size:12px;color:var(--txt2);cursor:pointer;margin-bottom:6px;transition:border-color .2s,background .3s;}
+.sq:active{border-color:var(--pur3);}
+
+/* STATS */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.stat-c{background:var(--card-bg);border:1px solid var(--bdr2);border-radius:var(--r);padding:16px;transition:background .3s,border-color .3s;}
+.stat-n{font-family:var(--mono);font-size:30px;font-weight:700;line-height:1;}
+.stat-l{font-size:11px;color:var(--txt4);margin-top:5px;}
+
+/* THINKING */
+.thinking{display:inline-flex;gap:4px;align-items:center;padding:6px 0;}
+.thinking span{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:blink 1.4s infinite;}
+.thinking span:nth-child(2){animation-delay:.2s;}.thinking span:nth-child(3){animation-delay:.4s;}
+@keyframes blink{0%,80%,100%{opacity:.2;transform:scale(.8);}40%{opacity:1;transform:scale(1);}}
+
+/* UPLOAD */
+.uparea{border:1.5px dashed var(--bdr);border-radius:var(--r);padding:18px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:12px;}
+.uparea:hover{border-color:var(--teal);background:rgba(94,231,208,.05);}
+.uparea.done{border-color:var(--green);background:rgba(61,207,144,.05);border-style:solid;}
+
+/* TOAST */
+.toast{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--bdr);border-radius:20px;padding:8px 18px;font-size:12px;color:var(--txt2);font-family:var(--mono);z-index:999;white-space:nowrap;pointer-events:none;animation:fi .25s ease;transition:background .3s;}
+
+/* CONFIRM */
+.conf-ov{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;z-index:500;backdrop-filter:blur(6px);animation:fi .2s ease;}
+[data-theme="light"] .conf-ov{background:rgba(0,0,0,.3);}
+.conf-box{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r2) var(--r2) 0 0;padding:24px 24px 32px;width:100%;max-width:390px;transition:background .3s,border-color .3s;}
+.conf-title{font-size:17px;font-weight:700;margin-bottom:8px;color:var(--txt);}
+.conf-sub{font-size:13px;color:var(--txt3);line-height:1.5;margin-bottom:20px;}
+
+/* QUICK ACTIONS BAR */
+.qa-bar{display:flex;gap:7px;padding:10px 20px 12px;border-top:1px solid var(--bdr2);flex-shrink:0;overflow-x:auto;scrollbar-width:none;transition:border-color .3s;}
+.qa-bar::-webkit-scrollbar{display:none;}
+.qa-btn{display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:18px;border:1px solid var(--bdr2);background:var(--bg4);color:var(--txt2);font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0;}
+.qa-btn:active{border-color:var(--pur);color:var(--pur);background:rgba(155,93,229,.1);}
+.qa-btn svg{width:12px;height:12px;flex-shrink:0;}
+
+/* COUNTDOWN */
+.cd-ov{position:absolute;inset:0;background:rgba(6,4,15,.92);display:flex;align-items:center;justify-content:center;z-index:400;flex-direction:column;gap:10px;}
+[data-theme="light"] .cd-ov{background:rgba(248,247,255,.92);}
+.cd-num{font-family:var(--mono);font-size:80px;font-weight:700;color:var(--pur);animation:cdpop .85s ease forwards;}
+@keyframes cdpop{0%{transform:scale(.4);opacity:0;}50%{transform:scale(1.1);}100%{transform:scale(1);opacity:1;}}
+
+/* PROFILE RING */
+.pring{width:68px;height:68px;border-radius:50%;border:2px solid var(--pur);background:rgba(155,93,229,.1);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:18px;font-weight:700;color:var(--pur);margin:0 auto 14px;position:relative;}
+.pring::after{content:'';position:absolute;inset:-7px;border-radius:50%;border:1px solid rgba(155,93,229,.3);animation:rp 2s infinite;}
+@keyframes rp{0%,100%{opacity:.25;transform:scale(1);}50%{opacity:.65;transform:scale(1.04);}}
+
+/* REC RING */
+.rrng{width:72px;height:72px;border-radius:50%;background:rgba(155,93,229,.1);border:2px solid rgba(155,93,229,.35);display:flex;align-items:center;justify-content:center;margin:14px auto;cursor:pointer;transition:all .2s;position:relative;}
+.rrng.live{background:var(--pur);border-color:var(--pur);box-shadow:0 0 28px rgba(155,93,229,.5);}
+.rrng::before{content:'';position:absolute;inset:-9px;border-radius:50%;border:1px solid rgba(155,93,229,.25);opacity:0;transition:opacity .3s;}
+.rrng.live::before{opacity:1;animation:rp 1s infinite;}
+
+/* TITLE SUGGEST */
+.tsug{display:flex;align-items:center;gap:8px;padding:7px 12px;background:rgba(155,93,229,.1);border:1px solid rgba(155,93,229,.3);border-radius:10px;margin-bottom:6px;cursor:pointer;animation:fi .3s ease;font-size:12px;color:var(--txt2);transition:background .15s;}
+.tsug:active{background:rgba(155,93,229,.2);}
+
+/* EMPTY */
+.empty{text-align:center;padding:48px 20px;color:var(--txt4);}
+.empty-icon{font-size:36px;margin-bottom:12px;}
+.empty-txt{font-size:14px;line-height:1.7;color:var(--txt3);}
+
+/* SPEAK STATUS */
+.speak-status{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  background:rgba(155,93,229,.08);border:1px solid rgba(155,93,229,.2);
+  border-radius:var(--r);margin-bottom:12px;font-size:12px;color:var(--txt2);
+}
+.speak-dot{width:8px;height:8px;border-radius:50%;background:var(--pur);animation:prec 1.2s infinite;flex-shrink:0;}
+
+/* SPEECH NOT SUPPORTED */
+.speech-warn{background:rgba(244,167,42,.08);border:1px solid rgba(244,167,42,.3);border-radius:var(--r);padding:12px 14px;font-size:12px;color:var(--amber);margin-bottom:12px;line-height:1.6;}
+
+/* TALKBAR */
+.talkbar{height:5px;border-radius:3px;overflow:hidden;display:flex;gap:1px;margin:8px 0;}
+
+/* ANIMATIONS */
+@keyframes fi{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+.fi{animation:fi .3s ease forwards;}
+
+/* LIGHT MODE ICON COLOURS */
+[data-theme="light"] .sbar svg path,[data-theme="light"] .sbar svg rect,[data-theme="light"] .sbar svg circle{stroke-opacity:.7;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- HEX BG -->
+<div class="hex-bg">
+  <svg viewBox="0 0 390 200" preserveAspectRatio="xMidYMid slice">
+    <defs><pattern id="hx" x="0" y="0" width="36" height="41.57" patternUnits="userSpaceOnUse">
+      <polygon points="18,1 35,10.78 35,30.78 18,40.57 1,30.78 1,10.78" fill="none" stroke="var(--hex-stroke)" stroke-width=".7"/>
+      <polygon points="18,42 35,51.78 35,71.78 18,81.57 1,71.78 1,51.78" fill="none" stroke="var(--hex-stroke)" stroke-width=".7"/>
+      <polygon points="36,21 53,30.78 53,50.78 36,60.57 19,50.78 19,30.78" fill="none" stroke="var(--hex-stroke)" stroke-width=".7"/>
+    </pattern></defs>
+    <rect width="390" height="200" fill="url(#hx)"/>
+  </svg>
+</div>
+
+<!-- STATUS BAR -->
+<div class="sbar">
+  <div class="sbar-time" id="clk">9:41</div>
+  <div class="sbar-right">
+    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">
+      <svg id="theme-icon" width="16" height="16" viewBox="0 0 20 20" fill="none">
+        <circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10 1V3M10 17V19M1 10H3M17 10H19M3.51 3.51L4.93 4.93M15.07 15.07L16.49 16.49M16.49 3.51L15.07 4.93M4.93 15.07L3.51 16.49" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <!-- battery + signal icons -->
+    <svg width="22" height="10" viewBox="0 0 22 10"><rect x="0" y="1" width="18" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1" opacity=".5"/><rect x="18" y="3" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/><rect x="1.5" y="2.5" width="11" height="5" rx="1" fill="currentColor" opacity=".7"/></svg>
+  </div>
+</div>
+
+<!-- ════════════════════════════ S0: SPLASH ════ -->
+<div class="screen active" id="s-splash">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:32px;text-align:center;">
+    <div style="margin-bottom:28px;">
+      <div style="font-family:var(--mono);font-size:52px;font-weight:700;letter-spacing:-2px;"><span style="color:var(--pur)">Deep</span><span style="color:var(--teal)">Talk</span></div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--txt4);letter-spacing:3px;margin-top:6px;text-transform:uppercase;">AI Meeting Intelligence</div>
+    </div>
+    <div style="font-size:14px;color:var(--txt3);line-height:1.8;margin-bottom:32px;max-width:270px;">Record any meeting. Know who said what. Never miss an action item.</div>
+    <div style="width:100%;max-width:290px;display:flex;flex-direction:column;gap:10px;">
+      <button class="btn btn-p" onclick="go('s-onboard')">Get started</button>
+      <button class="btn btn-s" onclick="loadDemo();go('s-lib')">Try demo workspace</button>
+    </div>
+    <div style="display:flex;gap:24px;margin-top:32px;">
+      <div style="text-align:center;"><div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--pur);">47</div><div style="font-size:10px;color:var(--txt4);margin-top:2px;">meetings</div></div>
+      <div style="width:1px;background:var(--bdr2);"></div>
+      <div style="text-align:center;"><div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--teal);">18h</div><div style="font-size:10px;color:var(--txt4);margin-top:2px;">transcribed</div></div>
+      <div style="width:1px;background:var(--bdr2);"></div>
+      <div style="text-align:center;"><div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--amber);">184</div><div style="font-size:10px;color:var(--txt4);margin-top:2px;">actions</div></div>
+    </div>
+  </div>
+  <div style="padding:0 32px 32px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--txt4);">Part of the <span style="color:var(--pur)">Deep</span> suite · Cloud9 Fulfilment</div>
+</div>
+
+<!-- ════════════════════════ S1: ONBOARDING ═══ -->
+<div class="screen" id="s-onboard">
+  <div class="hdr">
+    <button class="back-btn" onclick="go('s-splash',true)"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12 4L6 10L12 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <div class="logo"><span class="d">Deep</span><span class="t">Talk</span></div>
+    <div style="width:32px;"></div>
+  </div>
+  <div class="scr" style="padding-top:12px;">
+    <!-- OB1: Profile -->
+    <div id="ob1">
+      <div class="sdots"><div class="sd cur"></div><div class="sd"></div><div class="sd"></div><div class="sd"></div><div class="sd"></div></div>
+      <div class="pring" id="ob-av">JH</div>
+      <div class="h1" style="text-align:center;margin-bottom:6px;">Your profile</div>
+      <div style="font-size:13px;color:var(--txt3);text-align:center;margin-bottom:20px;">DeepTalk uses this to attribute your words and understand your role in meetings.</div>
+      <input class="inp" id="ob-name" placeholder="Full name" value="Josh Hegarty" oninput="updateAv()">
+      <input class="inp" id="ob-title" placeholder="Job title" value="Operations Lead">
+      <input class="inp" id="ob-dept" placeholder="Department" value="Operations">
+      <div class="uparea" id="ob-upload" onclick="doUpload()">
+        <div id="upload-txt">
+          <div style="font-size:22px;margin-bottom:6px;">📄</div>
+          <div style="font-size:13px;color:var(--teal);font-weight:500;">Upload job scope PDF</div>
+          <div style="font-size:11px;color:var(--txt4);margin-top:3px;">Gives AI context about your responsibilities</div>
+        </div>
+      </div>
+      <button class="btn btn-p" onclick="obGo(2)">Continue →</button>
+    </div>
+    <!-- OB2: Voice -->
+    <div id="ob2" style="display:none;">
+      <div class="sdots"><div class="sd done"></div><div class="sd cur"></div><div class="sd"></div><div class="sd"></div><div class="sd"></div></div>
+      <div class="h1" style="text-align:center;margin-bottom:4px;">Register your voice</div>
+      <div style="font-size:13px;color:var(--txt3);text-align:center;margin-bottom:16px;" id="p-sub">Phrase <span id="p-num">1</span> of 3 — read naturally</div>
+      <div class="card card-pur">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--pur);font-weight:700;letter-spacing:1px;margin-bottom:8px;">READ ALOUD</div>
+        <div style="font-size:15px;font-weight:500;color:var(--txt);line-height:1.5;font-style:italic;" id="p-txt">"The weekly update is ready for the team to review."</div>
+      </div>
+      <div class="card" style="padding:10px 12px;">
+        <div style="display:flex;align-items:center;gap:3px;height:36px;justify-content:center;" id="ob-wave">
+          <div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div>
+        </div>
+      </div>
+      <div class="rrng" id="ob-rec" onclick="recPhrase()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="11" rx="3" fill="var(--pur)"/><path d="M5 11C5 14.87 8.13 18 12 18C15.87 18 19 14.87 19 11" stroke="var(--pur)" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="18" x2="12" y2="22" stroke="var(--pur)" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div style="text-align:center;font-family:var(--mono);font-size:11px;color:var(--txt4);margin-bottom:12px;" id="ob-hint">Tap to record</div>
+      <div style="display:flex;gap:5px;justify-content:center;margin-bottom:16px;"><div class="sd" id="pp0"></div><div class="sd" id="pp1"></div><div class="sd" id="pp2"></div></div>
+      <button class="btn btn-g" onclick="obGo(3)">Skip voice setup</button>
+    </div>
+    <!-- OB3: Team -->
+    <div id="ob3" style="display:none;">
+      <div class="sdots"><div class="sd done"></div><div class="sd done"></div><div class="sd cur"></div><div class="sd"></div><div class="sd"></div></div>
+      <div class="h1" style="text-align:center;margin-bottom:4px;">Add your team</div>
+      <div style="font-size:13px;color:var(--txt3);text-align:center;margin-bottom:16px;">DeepTalk will recognise their voices in shared meetings.</div>
+      <div id="ob-team">
+        <div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <div class="av av-t">KH</div><div style="flex:1;"><div style="font-weight:600;font-size:14px;">Kaya Hegarty</div><div style="font-size:12px;color:var(--txt3);">Product Lead</div></div><span class="pill p-green">Added</span>
+        </div>
+      </div>
+      <button class="btn btn-s" style="margin-bottom:8px;" onclick="addMember()">+ Add team member</button>
+      <button class="btn btn-p" onclick="obGo(4)">Continue →</button>
+    </div>
+    <!-- OB4: Prefs -->
+    <div id="ob4" style="display:none;">
+      <div class="sdots"><div class="sd done"></div><div class="sd done"></div><div class="sd done"></div><div class="sd cur"></div><div class="sd"></div></div>
+      <div class="h1" style="text-align:center;margin-bottom:16px;">Preferences</div>
+      <div class="card">
+        <div class="tr"><span class="tl">Auto-generate summaries</span><button class="tog on" onclick="togBtn(this)"><div class="tog-t"></div></button></div>
+        <div class="tr"><span class="tl">Extract action items</span><button class="tog on" onclick="togBtn(this)"><div class="tog-t"></div></button></div>
+        <div class="tr"><span class="tl">Detect PowerPoint moments</span><button class="tog on" onclick="togBtn(this)"><div class="tog-t"></div></button></div>
+        <div class="tr"><span class="tl">Recording countdown (3-2-1)</span><button class="tog on" id="pref-cd" onclick="togBtn(this)"><div class="tog-t"></div></button></div>
+        <div class="tr"><span class="tl">Real speech recognition</span><button class="tog on" id="pref-sr" onclick="togBtn(this)"><div class="tog-t"></div></button></div>
+      </div>
+      <button class="btn btn-p" onclick="obGo(5)" style="margin-top:8px;">Continue →</button>
+    </div>
+    <!-- OB5: Done -->
+    <div id="ob5" style="display:none;text-align:center;padding:20px 0 32px;">
+      <div class="sdots"><div class="sd done"></div><div class="sd done"></div><div class="sd done"></div><div class="sd done"></div><div class="sd cur"></div></div>
+      <div style="font-size:48px;margin-bottom:16px;">✓</div>
+      <div class="h1" style="margin-bottom:8px;">You're all set</div>
+      <div style="font-size:13px;color:var(--txt3);line-height:1.7;margin-bottom:20px;">Voice ID registered · Profile complete<br>Team members added</div>
+      <div class="card card-teal" style="text-align:left;margin-bottom:16px;">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--teal2);font-weight:700;letter-spacing:1px;margin-bottom:6px;">VOICE ID ASSIGNED</div>
+        <div style="font-family:var(--mono);font-size:15px;color:var(--txt);">JH-7742-DELTA</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--txt4);margin-top:3px;">97.4% confidence threshold</div>
+      </div>
+      <button class="btn btn-p" onclick="loadDemo();go('s-lib')">Start using DeepTalk →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ S2: LIBRARY ══════ -->
+<div class="screen" id="s-lib">
+  <div class="hdr" style="padding-bottom:6px;">
+    <div class="logo"><span class="d">Deep</span><span class="t">Talk</span></div>
+    <button onclick="go('s-dash');setNav('nb-d')" style="background:none;border:none;color:var(--txt3);cursor:pointer;padding:6px;">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="11.5" y="2" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="2" y="11.5" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="11.5" y="11.5" width="6.5" height="6.5" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
+    </button>
+  </div>
+  <div style="padding:0 20px 6px;flex-shrink:0;">
+    <input class="inp" id="lib-search" placeholder="Search meetings, speakers, topics…" oninput="filterLib(this.value)" style="margin-bottom:8px;">
+    <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none;">
+      <button class="pill p-pur" id="fp-all" onclick="setFil('all',this)">All</button>
+      <button class="pill p-dim" id="fp-mine" onclick="setFil('mine',this)">My voice</button>
+      <button class="pill p-dim" id="fp-flag" onclick="setFil('flag',this)">Flagged</button>
+      <button class="pill p-dim" id="fp-share" onclick="setFil('share',this)">Shared</button>
+    </div>
+  </div>
+  <div class="scr" style="padding-top:4px;"><div id="lib-list"></div></div>
+</div>
+
+<!-- ═══════════════════════════ S3: RECORD ════ -->
+<div class="screen" id="s-rec">
+  <div class="hdr">
+    <button class="back-btn" onclick="leaveRec()"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12 4L6 10L12 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <div class="logo"><span class="d">Deep</span><span class="t">Talk</span></div>
+    <div id="live-pill" class="pill p-red" style="opacity:0;transition:opacity .3s;">
+      <span style="width:5px;height:5px;border-radius:50%;background:var(--red);animation:prec 1s infinite;flex-shrink:0;"></span>LIVE
+    </div>
+  </div>
+  <div class="scr">
+    <!-- Timer -->
+    <div style="text-align:center;padding:10px 0 4px;">
+      <div style="font-family:var(--mono);font-size:34px;font-weight:700;letter-spacing:2px;color:var(--txt);" id="r-timer">00:00:00</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--txt4);margin-top:2px;" id="r-status">Ready to record</div>
+    </div>
+    <!-- Speaker chips -->
+    <div id="r-chips" style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;min-height:26px;margin-bottom:4px;"></div>
+    <!-- Waveform -->
+    <div class="card" style="padding:10px 12px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:2px;height:44px;justify-content:center;" id="r-wave">
+        <div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div><div class="wb idle"></div>
+      </div>
+    </div>
+    <!-- Speech recognition status -->
+    <div id="speech-status"></div>
+    <!-- Title area -->
+    <div id="r-title-area">
+      <div id="r-tsug"></div>
+      <input class="inp" id="r-title" placeholder="Meeting title (AI will suggest one)…">
+    </div>
+    <!-- Template chooser -->
+    <div id="r-templates">
+      <div class="lbl">Quick start</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="card" style="padding:12px;cursor:pointer;text-align:center;transition:border-color .2s;" onclick="pickTpl('Vendor Review')" onmouseover="this.style.borderColor='var(--pur3)'" onmouseout="this.style.borderColor=''"><div style="font-size:18px;margin-bottom:4px;">🤝</div><div style="font-size:12px;font-weight:600;color:var(--txt);">Vendor review</div></div>
+        <div class="card" style="padding:12px;cursor:pointer;text-align:center;transition:border-color .2s;" onclick="pickTpl('Team Standup')" onmouseover="this.style.borderColor='var(--pur3)'" onmouseout="this.style.borderColor=''"><div style="font-size:18px;margin-bottom:4px;">📋</div><div style="font-size:12px;font-weight:600;color:var(--txt);">Team standup</div></div>
+        <div class="card" style="padding:12px;cursor:pointer;text-align:center;transition:border-color .2s;" onclick="pickTpl('Client Call')" onmouseover="this.style.borderColor='var(--pur3)'" onmouseout="this.style.borderColor=''"><div style="font-size:18px;margin-bottom:4px;">💼</div><div style="font-size:12px;font-weight:600;color:var(--txt);">Client call</div></div>
+        <div class="card" style="padding:12px;cursor:pointer;text-align:center;transition:border-color .2s;" onclick="pickTpl('Strategy Session')" onmouseover="this.style.borderColor='var(--pur3)'" onmouseout="this.style.borderColor=''"><div style="font-size:18px;margin-bottom:4px;">🎯</div><div style="font-size:12px;font-weight:600;color:var(--txt);">Strategy</div></div>
+      </div>
+    </div>
+    <!-- Live transcript -->
+    <div id="r-tx-sec" style="display:none;">
+      <div class="lbl">Live transcript</div>
+      <div id="r-tx"></div>
+      <!-- Interim text -->
+      <div class="tx-interim" id="r-interim"></div>
+    </div>
+    <!-- Controls -->
+    <div id="r-ctrl" style="display:none;gap:8px;margin-top:8px;">
+      <button class="btn btn-s" id="r-pause" onclick="togPause()" style="flex:1;">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="1" width="4" height="12" rx="1" fill="currentColor"/><rect x="8" y="1" width="4" height="12" rx="1" fill="currentColor"/></svg> Pause
+      </button>
+      <button class="btn btn-red" onclick="askStop()" style="flex:2;">
+        <svg width="14" height="14" viewBox="0 0 14 14"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--red)"/></svg> Stop
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ S4: SUMMARY ══════ -->
+<div class="screen" id="s-sum">
+  <div class="hdr">
+    <button class="back-btn" onclick="go('s-lib',true)"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12 4L6 10L12 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <div class="logo"><span class="d">Deep</span><span class="t">Talk</span></div>
+    <button onclick="go('s-share')" style="background:none;border:none;cursor:pointer;padding:6px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="18" cy="5" r="3" stroke="var(--pur)" stroke-width="1.5"/><circle cx="6" cy="12" r="3" stroke="var(--pur)" stroke-width="1.5"/><circle cx="18" cy="19" r="3" stroke="var(--pur)" stroke-width="1.5"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="var(--pur)" stroke-width="1.5"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="var(--pur)" stroke-width="1.5"/></svg>
+    </button>
+  </div>
+  <!-- Quick actions -->
+  <div class="qa-bar">
+    <button class="qa-btn" onclick="go('s-qa')"><svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 4.5C5.9 4.5 5 5.4 5 6.5H6C6 5.95 6.45 5.5 7 5.5C7.55 5.5 8 5.95 8 6.5C8 7 7.5 7.5 7 7.7V8.5H8V8.1C8.6 7.8 9 7.2 9 6.5C9 5.4 8.1 4.5 7 4.5ZM6.5 9V10H7.5V9H6.5Z" fill="currentColor"/></svg>Ask AI</button>
+    <button class="qa-btn" onclick="go('s-share')"><svg viewBox="0 0 14 14" fill="none"><circle cx="11" cy="3" r="1.8" stroke="currentColor" stroke-width="1.2"/><circle cx="3" cy="7" r="1.8" stroke="currentColor" stroke-width="1.2"/><circle cx="11" cy="11" r="1.8" stroke="currentColor" stroke-width="1.2"/><line x1="4.7" y1="7.8" x2="9.3" y2="10.2" stroke="currentColor" stroke-width="1.2"/><line x1="9.3" y1="3.8" x2="4.7" y2="6.2" stroke="currentColor" stroke-width="1.2"/></svg>Share</button>
+    <button class="qa-btn" onclick="copySummary()"><svg viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="8" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M10 4V3C10 2.45 9.55 2 9 2H3C2.45 2 2 2.45 2 3V9C2 9.55 2.45 10 3 10H4" stroke="currentColor" stroke-width="1.2"/></svg>Copy</button>
+    <button class="qa-btn" onclick="toggleFlag()" id="flag-btn"><svg viewBox="0 0 14 14" fill="none"><path d="M2 1.5V12.5M2 1.5L9.5 4.5L6 7L9.5 9.5H2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="flag-lbl">Flag</span></button>
+    <button class="qa-btn" onclick="doExport('md')"><svg viewBox="0 0 14 14" fill="none"><path d="M7 1V9M7 9L4.5 6.5M7 9L9.5 6.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M1 11H13M1 11V12H13V11" stroke="currentColor" stroke-width="1.3"/></svg>Export</button>
+  </div>
+  <div class="scr" style="padding-top:4px;">
+    <div class="h1" id="sum-title" style="margin-bottom:2px;"></div>
+    <div id="sum-meta" style="font-family:var(--mono);font-size:10px;color:var(--txt4);margin-bottom:6px;"></div>
+    <div id="sum-chips" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;"></div>
+    <div id="ai-proc" style="display:none;" class="card card-pur"><div style="display:flex;align-items:center;gap:10px;"><div class="thinking"><span></span><span></span><span></span></div><div style="font-size:13px;color:var(--txt2);" id="proc-lbl">Generating summary…</div></div></div>
+    <div class="lbl">AI summary</div>
+    <div class="card"><div id="sum-txt" style="font-size:13px;color:var(--txt2);line-height:1.7;"></div></div>
+    <div class="lbl">Action items</div>
+    <div id="sum-acts"></div>
+    <div class="lbl" id="ppt-sec">PowerPoint moments</div>
+    <div id="sum-ppt"></div>
+    <div class="lbl">Talk time</div>
+    <div class="card" id="sum-tt"></div>
+    <div class="lbl">Full transcript</div>
+    <div id="sum-tx"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ S5: SHARE ══════ -->
+<div class="screen" id="s-share">
+  <div class="hdr">
+    <button class="back-btn" onclick="go('s-sum',true)"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12 4L6 10L12 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <div class="logo"><span class="d">Deep</span><span class="t">Talk</span></div>
+    <div style="width:32px;"></div>
+  </div>
+  <div class="scr" style="padding-top:12px;">
+    <div class="h1" style="margin-bottom:4px;">Share meeting</div>
+    <div id="sh-title" style="font-size:13px;color:var(--txt4);margin-bottom:18px;"></div>
+    <div class="lbl">What to include</div>
+    <div class="card">
+      <div class="tr"><span class="tl">Full transcript</span><button class="tog on" id="t-tx" onclick="togBtn(this)"><div class="tog-t"></div></button></div>
+      <div class="tr"><span class="tl">AI summary</span><button class="tog on" id="t-sum" onclick="togBtn(this)"><div class="tog-t"></div></button></div>
+      <div class="tr"><span class="tl">Action items</span><button class="tog on" id="t-act" onclick="togBtn(this)"><div class="tog-t"></div></button></div>
+      <div class="tr"><span class="tl">PowerPoint moments</span><button class="tog on" id="t-ppt" onclick="togBtn(this)"><div class="tog-t"></div></button></div>
+    </div>
+    <div class="lbl">Send via</div>
+    <div class="sch" onclick="doShare('email')"><div class="sch-ic" style="background:rgba(94,231,208,.1);color:var(--teal2);font-family:var(--mono);">@</div><div style="flex:1;"><div class="sch-nm">Email</div><div class="sch-ds">Opens your mail client</div></div><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 11L9 7L5 3" stroke="var(--txt4)" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    <div class="sch" onclick="doShare('wa')"><div class="sch-ic" style="background:rgba(37,211,102,.08);color:#25d366;font-family:var(--mono);">W</div><div style="flex:1;"><div class="sch-nm">WhatsApp</div><div class="sch-ds">Send to contact or group</div></div><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 11L9 7L5 3" stroke="var(--txt4)" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    <div class="sch" onclick="doShare('gc')"><div class="sch-ic" style="background:rgba(91,143,249,.1);color:var(--blue);font-family:var(--mono);font-size:14px;">G</div><div style="flex:1;"><div class="sch-nm">Google Chat</div><div class="sch-ds">Copy formatted message</div></div><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 11L9 7L5 3" stroke="var(--txt4)" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    <div class="sch" id="link-sch" onclick="doShare('link')"><div class="sch-ic" style="background:var(--bg4);font-size:17px;">🔗</div><div style="flex:1;"><div class="sch-nm">Copy link</div><div class="sch-ds">Shareable URL with view access</div></div><span id="link-ok" style="display:none;color:var(--green);font-family:var(--mono);font-size:11px;">Copied!</span><svg id="link-arr" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 11L9 7L5 3" stroke="var(--txt4)" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    <div class="lbl">Export</div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-g btn-sm" onclick="doExport('md')">Markdown .md</button>
+      <button class="btn btn-g btn-sm" onclick="doExport('txt')">Plain .txt</button>
+    </div>
+    <div id="sh-done" style="display:none;margin-top:14px;" class="card card-success fi"><div style="font-family:var(--mono);font-size:9px;color:var(--green);font-weight:700;letter-spacing:1px;margin-bottom:4px;">SENT ✓</div><div style="font-size:13px;color:var(--txt2);" id="sh-done-txt"></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ S6: Q&A ═══════ -->
+<div class="screen" id="s-qa">
+  <div class="hdr" style="flex-shrink:0;">
+    <button class="back-btn" onclick="go('s-sum',true)"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12 4L6 10L12 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <div class="logo"><span class="d">Deep</span><span class="t">Talk</span></div>
+    <div style="width:32px;"></div>
+  </div>
+  <div style="padding:6px 20px 10px;flex-shrink:0;">
+    <div style="background:var(--bg3);border:1px solid var(--bdr2);border-radius:20px;padding:5px 14px;text-align:center;margin-bottom:8px;transition:background .3s;"><span style="font-family:var(--mono);font-size:10px;color:var(--txt4);" id="qa-m">Meeting</span></div>
+    <div id="qa-sqs">
+      <div class="sq" onclick="askQ(this)">What did we agree on?</div>
+      <div class="sq" onclick="askQ(this)">Who owns each action item?</div>
+      <div class="sq" onclick="askQ(this)">Summarise the PowerPoint moments</div>
+      <div class="sq" onclick="askQ(this)">What were the key decisions?</div>
+    </div>
+  </div>
+  <div class="scr" id="qa-msgs" style="padding-top:4px;display:flex;flex-direction:column;gap:8px;"></div>
+  <div style="padding:10px 20px 14px;display:flex;gap:8px;align-items:center;border-top:1px solid var(--bdr2);flex-shrink:0;transition:border-color .3s;">
+    <input id="qa-inp" class="inp" placeholder="Ask about this meeting…" style="flex:1;margin-bottom:0;border-radius:20px;padding:10px 16px;" onkeydown="if(event.key==='Enter')sendQ()">
+    <button onclick="sendQ()" style="width:36px;height:36px;border-radius:50%;background:var(--pur);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s,background .3s;" onmousedown="this.style.transform='scale(.9)'" onmouseup="this.style.transform=''">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 8L14 2L8 14L7 9L2 8Z" fill="white"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════ S7: DASHBOARD ══════ -->
+<div class="screen" id="s-dash">
+  <div class="hdr">
+    <div class="logo"><span class="d">Deep</span><span class="t">Talk</span></div>
+    <div class="pill p-pur" style="font-size:9px;">Cloud9</div>
+  </div>
+  <div class="scr" style="padding-top:12px;">
+    <div style="font-size:13px;color:var(--txt4);margin-bottom:14px;">Workspace · April 2026</div>
+    <div class="stat-grid">
+      <div class="stat-c"><div class="stat-n" style="color:var(--pur);">47</div><div class="stat-l">Meetings / month</div></div>
+      <div class="stat-c"><div class="stat-n" style="color:var(--teal2);">18.4</div><div class="stat-l">Hours transcribed</div></div>
+      <div class="stat-c"><div class="stat-n" style="color:var(--amber);">184</div><div class="stat-l">Action items</div></div>
+      <div class="stat-c"><div class="stat-n" style="color:var(--blue);">63</div><div class="stat-l">PowerPoint moments</div></div>
+    </div>
+    <div class="lbl">Speaker activity</div>
+    <div class="card" id="d-spk"></div>
+    <div class="lbl">Recent meetings</div>
+    <div id="d-meet"></div>
+    <div class="lbl">Team</div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--bdr2);">
+        <div class="av av-p">JH</div><div style="flex:1;"><div style="font-size:13px;font-weight:600;">Josh Hegarty</div><div style="font-size:11px;color:var(--txt4);">Operations Lead</div></div><span class="pill p-pur">Admin</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 0;">
+        <div class="av av-t">KH</div><div style="flex:1;"><div style="font-size:13px;font-weight:600;">Kaya Hegarty</div><div style="font-size:11px;color:var(--txt4);">Product Lead</div></div><span class="pill p-teal">Member</span>
+      </div>
+    </div>
+    <div class="lbl">Speech recognition</div>
+    <div class="card" id="d-speech"></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div id="nav" style="display:none;">
+  <button class="nb on" id="nb-h" onclick="go('s-lib');setNav('nb-h')">
+    <svg viewBox="0 0 22 22" fill="none"><path d="M2 11L11 2L20 11V20H14V14H8V20H2V11Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>Home
+  </button>
+  <button class="nb-mic" id="nb-mic" onclick="startRecFlow()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="11" rx="3" fill="white"/><path d="M5 11C5 14.87 8.13 18 12 18C15.87 18 19 14.87 19 11" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="18" x2="12" y2="22" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="22" x2="15" y2="22" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <button class="nb" id="nb-d" onclick="go('s-dash');setNav('nb-d')">
+    <svg viewBox="0 0 22 22" fill="none"><rect x="2" y="2" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="13" y="2" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="2" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>Dashboard
+  </button>
+</div>
+</div><!-- /app -->
+
+<script>
+// ═══════════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════════
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  const icon = document.getElementById('theme-icon');
+  icon.innerHTML = isDark
+    ? `<path d="M12 3C7.03 3 3 7.03 3 12C3 16.97 7.03 21 12 21C16.97 21 21 16.97 21 12C21 7.03 16.97 3 12 3ZM12 19C8.13 19 5 15.87 5 12C5 8.13 8.13 5 12 5V19Z" fill="currentColor" transform="scale(.83) translate(2,2)"/>`
+    : `<circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M10 1V3M10 17V19M1 10H3M17 10H19M3.51 3.51L4.93 4.93M15.07 15.07L16.49 16.49M16.49 3.51L15.07 4.93M4.93 15.07L3.51 16.49" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>`;
+  toast(isDark ? '☀ Light mode' : '🌙 Dark mode');
+}
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+const S = {
+  scr:'s-splash', hist:[],
+  meetings:[], cur:null, active:null,
+  isRec:false, isPaused:false, recSecs:0, timerID:null,
+  filter:'all', search:'',
+  speechAvail:false, recog:null,
+};
+
+// Check speech recognition availability
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+S.speechAvail = !!SR;
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+function go(id, back=false) {
+  if (S.scr === id) return;
+  const cur = document.getElementById(S.scr);
+  const nxt = document.getElementById(id);
+  if (!cur || !nxt) return;
+  S.hist.push(S.scr);
+  cur.classList.add(back ? 'bx' : 'fx');
+  cur.classList.remove('active');
+  nxt.classList.remove('bx','fx');
+  nxt.classList.add('active');
+  S.scr = id;
+  setTimeout(() => cur.classList.remove('bx','fx'), 300);
+  const noNav = ['s-splash','s-onboard'];
+  document.getElementById('nav').style.display = noNav.includes(id) ? 'none' : 'flex';
+  tickClock();
+  if (id === 's-dash') renderDash();
+  if (id === 's-lib') renderLib();
+}
+function setNav(id) {
+  document.querySelectorAll('.nb').forEach(b => b.classList.remove('on'));
+  document.getElementById(id)?.classList.add('on');
+}
+function tickClock() {
+  const n = new Date();
+  document.getElementById('clk').textContent =
+    n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');
+}
+setInterval(tickClock,30000); tickClock();
+document.getElementById('nav').style.display='none';
+
+// ═══════════════════════════════════════════
+// ONBOARDING
+// ═══════════════════════════════════════════
+const PHRASES = [
+  '"The weekly update is ready for the team to review."',
+  '"We need to confirm the delivery schedule before end of day."',
+  '"Operations are running smoothly across all departments."'
+];
+let pIdx=0;
+function obGo(n){
+  for(let i=1;i<=5;i++){const e=document.getElementById('ob'+i);if(e)e.style.display='none';}
+  const e=document.getElementById('ob'+n);
+  if(e){e.style.display='block';e.classList.add('fi');}
+}
+function updateAv(){
+  const v=document.getElementById('ob-name').value.trim();
+  const ini=v.split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase()||'JH';
+  document.getElementById('ob-av').textContent=ini;
+}
+function doUpload(){
+  document.getElementById('ob-upload').classList.add('done');
+  document.getElementById('upload-txt').innerHTML='<div style="color:var(--green);font-size:13px;font-weight:600;">✓ job-scope-operations.pdf</div><div style="font-size:11px;color:var(--txt4);margin-top:3px;">42KB · Uploaded</div>';
+}
+function recPhrase(){
+  const btn=document.getElementById('ob-rec'),hint=document.getElementById('ob-hint');
+  if(btn.classList.contains('live'))return;
+  btn.classList.add('live');
+  document.querySelectorAll('#ob-wave .wb').forEach(b=>b.classList.remove('idle'));
+  hint.textContent='Recording… speak naturally';
+  setTimeout(()=>{
+    btn.classList.remove('live');
+    document.querySelectorAll('#ob-wave .wb').forEach(b=>b.classList.add('idle'));
+    const pp=document.getElementById('pp'+pIdx);
+    if(pp){pp.classList.remove('sd');pp.classList.add('sd','done');}
+    pIdx++;
+    if(pIdx<3){
+      document.getElementById('p-txt').textContent=PHRASES[pIdx];
+      document.getElementById('p-num').textContent=pIdx+1;
+      hint.textContent='Tap to record phrase '+(pIdx+1);
+    } else {
+      hint.textContent='✓ All 3 phrases captured!';
+      setTimeout(()=>obGo(3),700);
+    }
+  },2800);
+}
+function addMember(){
+  const defs=[['WH','Wilder Hegarty','Ops Analyst','av-b'],['SM','Sara Mitchell','Finance Lead','av-p']];
+  const idx=document.getElementById('ob-team').children.length-1;
+  if(idx>=defs.length)return;
+  const [i,n,r,c]=defs[idx];
+  const el=document.createElement('div');
+  el.className='card fi';el.style.cssText='display:flex;align-items:center;gap:12px;margin-bottom:8px;';
+  el.innerHTML=`<div class="av ${c}">${i}</div><div style="flex:1;"><div style="font-weight:600;font-size:14px;">${n}</div><div style="font-size:12px;color:var(--txt4);">${r}</div></div><span class="pill p-green">Added</span>`;
+  document.getElementById('ob-team').appendChild(el);
+}
+
+// ═══════════════════════════════════════════
+// SPEECH RECOGNITION ENGINE
+// ═══════════════════════════════════════════
+let recog = null;
+let interimEl = null;
+let finalTranscript = '';
+
+function initSpeech() {
+  if (!S.speechAvail) return;
+  recog = new SR();
+  recog.continuous = true;
+  recog.interimResults = true;
+  recog.lang = 'en-GB';
+  recog.maxAlternatives = 1;
+
+  recog.onstart = () => {
+    document.getElementById('speech-status').innerHTML =
+      `<div class="speak-status"><div class="speak-dot"></div><span>Live transcription active — speak naturally</span></div>`;
+  };
+
+  recog.onresult = (event) => {
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const res = event.results[i];
+      if (res.isFinal) {
+        const txt = res[0].transcript.trim();
+        if (txt) processFinalLine(txt);
+      } else {
+        interim += res[0].transcript;
+      }
+    }
+    // Show interim
+    const intEl = document.getElementById('r-interim');
+    if (intEl) intEl.textContent = interim || '';
+  };
+
+  recog.onerror = (e) => {
+    if (e.error === 'no-speech') return; // normal
+    if (e.error === 'not-allowed') {
+      document.getElementById('speech-status').innerHTML =
+        `<div class="speech-warn">⚠ Microphone access denied. Using demo transcript. Allow mic access and restart.</div>`;
+      runDemoTranscript();
+    }
+    console.warn('Speech error:', e.error);
+  };
+
+  recog.onend = () => {
+    // Auto-restart if still recording
+    if (S.isRec && !S.isPaused) {
+      try { recog.start(); } catch(e){}
+    }
+  };
+}
+
+function processFinalLine(txt) {
+  if (!S.isRec || !S.active) return;
+  const isPPT = /\bpowerpoint\b/i.test(txt);
+  const clean = txt.replace(/\bpowerpoint\b/gi, '').replace(/\s+/g,' ').trim() || txt;
+  const line = { speaker:'you', text:clean, isPPT, time:S.recSecs };
+  S.active.transcript.push(line);
+  S.active.talkTime['you'] = (S.active.talkTime['you']||0) + clean.split(' ').length;
+  if (isPPT) S.active.pptMoments.push({ speaker:'You', text:clean, time:fmtTime(S.recSecs) });
+  appendTxLine(line, document.getElementById('r-tx'));
+  document.getElementById('r-interim').textContent = '';
+
+  // Suggest title after 3 lines
+  if (S.active.transcript.length === 3 && !document.getElementById('r-title').value) suggestTitle();
+}
+
+// ═══════════════════════════════════════════
+// RECORDING FLOW
+// ═══════════════════════════════════════════
+const SPK = {
+  you:      { name:'You',      col:'var(--pur)',  bg:'rgba(155,93,229,.15)',  ini:'JH' },
+  josh:     { name:'Josh',     col:'var(--pur)',  bg:'rgba(155,93,229,.15)',  ini:'JH' },
+  kaya:     { name:'Kaya',     col:'var(--teal2)',bg:'rgba(94,231,208,.1)',   ini:'KH' },
+  supplier: { name:'Supplier', col:'var(--blue)', bg:'rgba(91,143,249,.1)',   ini:'SU' },
+};
+
+let demoTids=[], recSecs2=0;
+
+const DEMO_TX=[
+  {t:1800,sp:'kaya',    txt:"Right, let's get started. Q3 vendor proposals — let's walk through the key terms."},
+  {t:4800,sp:'you',     txt:"I've reviewed the documents. Pricing looks competitive but we need to nail down the SLA."},
+  {t:8500,sp:'supplier',txt:"We're offering 99.5% uptime with a four-hour response window on all critical incidents."},
+  {t:12500,sp:'you',    txt:"POWERPOINT — that uptime figure is the key number. Can you confirm the penalty structure?",ppt:true},
+  {t:17000,sp:'supplier',txt:"For every hour beyond the four-hour window you receive a 10% service credit against your next invoice."},
+  {t:21500,sp:'kaya',   txt:"That's better than our current provider. POWERPOINT — we should get legal to review before we commit.",ppt:true},
+  {t:26000,sp:'you',    txt:"Agreed. Can we have the full contract amendment by Thursday?"},
+  {t:30000,sp:'supplier',txt:"Absolutely. I'll send everything by Thursday EOD — the full SLA schedule and the credit mechanism."},
+  {t:34500,sp:'kaya',   txt:"I'll block Friday afternoon for sign-off once legal have cleared it."},
+  {t:39000,sp:'supplier',txt:"One more thing — there's a 5% volume discount available if you commit to a 24-month term."},
+  {t:43500,sp:'kaya',   txt:"POWERPOINT — let's flag that to finance before we make any commitment.",ppt:true},
+  {t:47500,sp:'you',    txt:"Good catch. Let's wrap there. Reconvene Friday after legal sign-off."},
+];
+
+function startRecFlow() {
+  // Full reset
+  S.isRec=false; S.isPaused=false; S.recSecs=0; recSecs2=0;
+  if(S.timerID) clearInterval(S.timerID);
+  demoTids.forEach(t=>clearTimeout(t)); demoTids=[];
+  if(recog && S.speechAvail){ try{recog.stop();}catch(e){} }
+
+  document.getElementById('r-timer').textContent='00:00:00';
+  document.getElementById('r-status').textContent='Ready to record';
+  document.getElementById('r-chips').innerHTML='';
+  document.getElementById('r-tx').innerHTML='';
+  document.getElementById('r-interim').textContent='';
+  document.getElementById('r-tx-sec').style.display='none';
+  document.getElementById('r-ctrl').style.display='none';
+  document.getElementById('r-templates').style.display='block';
+  document.getElementById('r-title').value='';
+  document.getElementById('r-tsug').innerHTML='';
+  document.getElementById('live-pill').style.opacity='0';
+  document.getElementById('speech-status').innerHTML='';
+  document.querySelectorAll('#r-wave .wb').forEach(b=>b.classList.add('idle'));
+  document.getElementById('nb-mic').classList.remove('live');
+
+  go('s-rec'); setNav('nb-mic');
+  setTimeout(()=>beginCountdown(),200);
+}
+
+function beginCountdown(){
+  const useCD = document.getElementById('pref-cd')?.classList.contains('on') !== false;
+  if(!useCD){beginRecording();return;}
+  const ov=document.createElement('div'); ov.className='cd-ov'; ov.id='cd';
+  document.getElementById('app').appendChild(ov);
+  let c=3;
+  const tick=()=>{
+    ov.innerHTML=`<div class="cd-num">${c}</div><div style="font-family:var(--mono);font-size:11px;color:var(--txt4);letter-spacing:2px;margin-top:4px;">STARTING IN</div>`;
+    c--;
+    if(c>=0) setTimeout(tick,900); else {ov.remove();beginRecording();}
+  };
+  tick();
+}
+
+function beginRecording(){
+  S.isRec=true; S.recSecs=0; recSecs2=0;
+  S.active={
+    id:Date.now(), title:'', date:new Date(), duration:0,
+    speakers:['you'], shared:false, flagged:false, mine:true,
+    transcript:[], summary:'', actions:[], pptMoments:[], talkTime:{},
+    usedSpeech: S.speechAvail,
+  };
+
+  document.getElementById('live-pill').style.opacity='1';
+  document.getElementById('r-status').textContent='Recording — speak naturally';
+  document.getElementById('r-templates').style.display='none';
+  document.getElementById('r-tx-sec').style.display='block';
+  document.getElementById('r-ctrl').style.cssText='display:flex;gap:8px;margin-top:8px;';
+  document.getElementById('nb-mic').classList.add('live');
+  document.querySelectorAll('#r-wave .wb').forEach(b=>b.classList.remove('idle'));
+
+  S.timerID=setInterval(()=>{
+    if(!S.isPaused){ S.recSecs++; recSecs2++; if(S.active) S.active.duration=S.recSecs; }
+    const h=Math.floor(S.recSecs/3600),m=Math.floor((S.recSecs%3600)/60),s=S.recSecs%60;
+    document.getElementById('r-timer').textContent=
+      `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  },1000);
+
+  // Speaker chips appear
+  setTimeout(()=>{
+    const el=document.getElementById('r-chips');
+    const spk=S.speechAvail?{you:{name:'You',col:'var(--pur)',bg:'rgba(155,93,229,.15)'}}:SPK;
+    el.innerHTML='';
+    Object.values(spk).forEach(sp=>{
+      const c=document.createElement('div');
+      c.className='pill fi';
+      c.style.cssText=`background:${sp.bg};color:${sp.col};border:1px solid ${sp.col}30;`;
+      c.innerHTML=`<span style="width:5px;height:5px;border-radius:50%;background:${sp.col};"></span>${sp.name}`;
+      el.appendChild(c);
+    });
+  },500);
+
+  if(S.speechAvail){
+    // Real speech recognition
+    initSpeech();
+    try{ recog.start(); }
+    catch(e){
+      document.getElementById('speech-status').innerHTML=
+        `<div class="speech-warn">⚠ Couldn't start speech recognition. Using demo transcript.</div>`;
+      runDemoTranscript();
+    }
+  } else {
+    document.getElementById('speech-status').innerHTML=
+      `<div class="speech-warn">⚠ Speech recognition not available in this browser. Chrome/Edge recommended. Using demo transcript.</div>`;
+    runDemoTranscript();
+  }
+}
+
+function runDemoTranscript(){
+  const txDiv=document.getElementById('r-tx');
+  // Add demo speakers to active
+  if(S.active) S.active.speakers=['josh','kaya','supplier'];
+  const speakerChips=document.getElementById('r-chips');
+  speakerChips.innerHTML='';
+  [SPK.josh,SPK.kaya,SPK.supplier].forEach(sp=>{
+    const c=document.createElement('div');c.className='pill fi';
+    c.style.cssText=`background:${sp.bg};color:${sp.col};border:1px solid ${sp.col}30;`;
+    c.innerHTML=`<span style="width:5px;height:5px;border-radius:50%;background:${sp.col};"></span>${sp.name}`;
+    speakerChips.appendChild(c);
+  });
+  DEMO_TX.forEach(item=>{
+    const tid=setTimeout(()=>{
+      if(!S.isRec)return;
+      const sp=SPK[item.sp];
+      const isPPT=!!item.ppt;
+      const txt=item.txt.replace(/POWERPOINT — /,'');
+      const line={speaker:item.sp,text:txt,isPPT,time:S.recSecs};
+      S.active.transcript.push(line);
+      S.active.talkTime[item.sp]=(S.active.talkTime[item.sp]||0)+txt.split(' ').length;
+      if(isPPT) S.active.pptMoments.push({speaker:sp.name,text:txt,time:fmtTime(S.recSecs)});
+      appendTxLine(line,txDiv);
+      if(S.active.transcript.length===3 && !document.getElementById('r-title').value) suggestTitle();
+    },item.t);
+    demoTids.push(tid);
+  });
+}
+
+function appendTxLine(line, container){
+  const sp=SPK[line.speaker]||{name:line.speaker,col:'var(--pur)',bg:'rgba(155,93,229,.1)'};
+  const el=document.createElement('div'); el.className='txl';
+  if(line.isPPT){
+    el.innerHTML=`<div class="txsp"><div class="txdot" style="background:${sp.col};"></div><span class="txname" style="color:${sp.col};">${sp.name}</span><span class="txtime">${fmtTime(line.time||0)}</span></div><div class="txppt"><div class="ppt-lbl">⚡ POWERPOINT</div><div style="font-size:13px;color:var(--txt);">${line.text}</div></div>`;
+  } else {
+    el.innerHTML=`<div class="txsp"><div class="txdot" style="background:${sp.col};"></div><span class="txname" style="color:${sp.col};">${sp.name}</span><span class="txtime">${fmtTime(line.time||0)}</span></div><div class="txtext">${line.text}</div>`;
+  }
+  container.appendChild(el);
+  container.parentElement.scrollTop=container.parentElement.scrollHeight;
+}
+
+function suggestTitle(){
+  const wrap=document.getElementById('r-tsug');
+  wrap.innerHTML='';
+  const firstWords=S.active?.transcript.slice(0,3).map(l=>l.text).join(' ')||'';
+  const suggestions=['Q3 Vendor Review','SLA Discussion','Procurement Meeting'];
+  suggestions.forEach(s=>{
+    const el=document.createElement('div'); el.className='tsug';
+    el.innerHTML=`<span style="color:var(--pur);font-family:var(--mono);font-size:9px;font-weight:700;">✨ AI</span>${s}`;
+    el.onclick=()=>{ document.getElementById('r-title').value=s; if(S.active)S.active.title=s; wrap.innerHTML=''; };
+    wrap.appendChild(el);
+  });
+}
+
+function pickTpl(n){
+  document.getElementById('r-title').value=n;
+  if(S.active)S.active.title=n;
+}
+
+function togPause(){
+  S.isPaused=!S.isPaused;
+  const btn=document.getElementById('r-pause');
+  const bars=document.querySelectorAll('#r-wave .wb');
+  if(S.isPaused){
+    btn.innerHTML=`<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2,1 12,7 2,13" fill="currentColor"/></svg> Resume`;
+    document.getElementById('r-status').textContent='Paused';
+    bars.forEach(b=>b.classList.add('idle'));
+    if(recog&&S.speechAvail){try{recog.stop();}catch(e){}}
+  } else {
+    btn.innerHTML=`<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="1" width="4" height="12" rx="1" fill="currentColor"/><rect x="8" y="1" width="4" height="12" rx="1" fill="currentColor"/></svg> Pause`;
+    document.getElementById('r-status').textContent='Recording…';
+    bars.forEach(b=>b.classList.remove('idle'));
+    if(recog&&S.speechAvail){try{recog.start();}catch(e){}}
+  }
+}
+
+function askStop(){
+  confirm2('Stop recording?','DeepTalk will process your transcript and generate an AI summary with action items.','Stop & process',finishRec,'Keep recording');
+}
+
+function leaveRec(){
+  if(!S.isRec){go('s-lib',true);return;}
+  confirm2('Leave recording?','The recording will be saved and processed.','Save & leave',finishRec,'Stay');
+}
+
+function finishRec(){
+  S.isRec=false;
+  if(S.timerID)clearInterval(S.timerID);
+  demoTids.forEach(t=>clearTimeout(t));demoTids=[];
+  if(recog&&S.speechAvail){try{recog.stop();}catch(e){}}
+  document.getElementById('live-pill').style.opacity='0';
+  document.getElementById('nb-mic').classList.remove('live');
+  document.querySelectorAll('#r-wave .wb').forEach(b=>b.classList.add('idle'));
+  document.getElementById('speech-status').innerHTML='';
+
+  const m=S.active;
+  const tv=document.getElementById('r-title').value.trim();
+  m.title=tv||'Untitled Meeting';
+  m.duration=S.recSecs;
+  S.meetings.unshift(m);
+  S.cur=m;
+
+  document.getElementById('sum-title').textContent=m.title;
+  document.getElementById('sum-meta').textContent=fmtDate(m.date)+' · '+fmtDur(m.duration)+' · '+m.speakers.length+' speaker'+(m.speakers.length>1?'s':'');
+  document.getElementById('sh-title').textContent=m.title;
+  document.getElementById('qa-m').textContent=m.title;
+  document.getElementById('flag-lbl').textContent='Flag';
+
+  go('s-sum'); setNav('nb-h');
+  renderSum(m,true);
+}
+
+// ═══════════════════════════════════════════
+// AI PROCESSING
+// ═══════════════════════════════════════════
+async function callAI(prompt){
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+  });
+  const d=await res.json();
+  if(d.content?.[0]?.text)return d.content[0].text;
+  throw new Error('API');
+}
+
+async function renderSum(m,doAI=false){
+  document.getElementById('sum-title').textContent=m.title;
+  document.getElementById('sum-meta').textContent=fmtDate(m.date)+' · '+fmtDur(m.duration)+' · '+m.speakers.length+' speaker'+(m.speakers.length>1?'s':'');
+  document.getElementById('sh-title').textContent=m.title;
+  document.getElementById('qa-m').textContent=m.title;
+
+  // Speaker chips
+  const sc=document.getElementById('sum-chips'); sc.innerHTML='';
+  const usedSpk=m.speakers.filter(k=>SPK[k]);
+  (usedSpk.length?usedSpk:['you']).forEach(sk=>{
+    const sp=SPK[sk]||{name:sk,col:'var(--pur)',bg:'rgba(155,93,229,.15)'};
+    const c=document.createElement('span'); c.className='pill';
+    c.style.cssText=`background:${sp.bg};color:${sp.col};border:1px solid ${sp.col}30;`;
+    c.innerHTML=`<span style="width:5px;height:5px;border-radius:50%;background:${sp.col};"></span>${sp.name}`;
+    sc.appendChild(c);
+  });
+
+  const ctx=(m.transcript||[]).map(l=>`${SPK[l.speaker]?.name||l.speaker}: ${l.text}`).join('\n');
+  const proc=document.getElementById('ai-proc'),lbl=document.getElementById('proc-lbl');
+
+  if(doAI && m.transcript.length>0){
+    proc.style.display='block';
+    try{
+      lbl.textContent='Generating summary…';
+      m.summary=await callAI(`Summarise this meeting in 3-4 sentences covering key decisions, outcomes, and next steps. Return only the summary text.\n\n${ctx}`);
+      lbl.textContent='Extracting action items…';
+      const ar=await callAI(`Extract action items. Return ONLY valid JSON array [{owner,action,deadline}]. No markdown.\n\n${ctx}`);
+      try{m.actions=JSON.parse(ar.replace(/```json|```/g,'').trim());}catch(e){m.actions=demoActs();}
+      proc.style.display='none';
+    }catch(e){proc.style.display='none';m.summary=m.summary||demoSum();m.actions=m.actions?.length?m.actions:demoActs();}
+  } else {
+    proc.style.display='none';
+    if(!m.summary)m.summary=demoSum();
+    if(!m.actions?.length)m.actions=demoActs();
+  }
+
+  document.getElementById('sum-txt').textContent=m.summary;
+
+  // Actions
+  const al=document.getElementById('sum-acts'); al.innerHTML='';
+  (m.actions||[]).forEach((a,i)=>{
+    const el=document.createElement('div'); el.className='ai-item fi';
+    el.innerHTML=`<div class="ai-chk" id="ck-${i}" onclick="togAct(${i})"></div><div style="flex:1;"><div class="ai-txt">${a.action}</div><div class="ai-own">${a.owner}</div>${a.deadline?`<div class="ai-dl">→ ${a.deadline}</div>`:''}</div>`;
+    al.appendChild(el);
+  });
+
+  // PPT
+  const pl=document.getElementById('sum-ppt'); pl.innerHTML='';
+  if(!m.pptMoments?.length){
+    document.getElementById('ppt-sec').style.display='none';
+  } else {
+    document.getElementById('ppt-sec').style.display='block';
+    m.pptMoments.forEach(p=>{
+      const el=document.createElement('div'); el.className='card card-hi fi';
+      el.innerHTML=`<div class="ppt-lbl">⚡ POWERPOINT · ${p.speaker}${p.time?' · '+p.time:''}</div><div style="font-size:13px;color:var(--txt);line-height:1.5;margin-top:3px;">"${p.text}"</div>`;
+      pl.appendChild(el);
+    });
+  }
+
+  // Talk time
+  const tt=document.getElementById('sum-tt'); tt.innerHTML='';
+  const total=Object.values(m.talkTime||{}).reduce((a,b)=>a+b,0)||1;
+  const cols=['var(--pur)','var(--teal2)','var(--blue)','var(--amber)'];
+  Object.entries(m.talkTime||{}).forEach(([sp,w],i)=>{
+    const pct=Math.round((w/total)*100);
+    const spk=SPK[sp]||{name:sp};
+    tt.innerHTML+=`<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-size:12px;color:var(--txt2);">${spk.name}</span><span style="font-family:var(--mono);font-size:10px;color:var(--txt4);">${pct}%</span></div><div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${cols[i]||'var(--pur)'};border-radius:3px;"></div></div></div>`;
+  });
+
+  // Transcript
+  const txd=document.getElementById('sum-tx'); txd.innerHTML='';
+  (m.transcript||[]).forEach(line=>appendTxLine(line,txd));
+}
+
+// ═══════════════════════════════════════════
+// LIBRARY
+// ═══════════════════════════════════════════
+function loadDemo(){
+  if(S.meetings.length)return;
+  S.meetings=[
+    {id:1,title:'Q3 Vendor Review',date:new Date(),duration:780,speakers:['josh','kaya','supplier'],shared:true,flagged:false,mine:true,
+     transcript:[
+       {speaker:'josh',text:"Let's get started — Q3 vendor proposals, walk us through the key terms.",isPPT:false,time:12},
+       {speaker:'kaya',text:"Pricing looks competitive but we need to nail down the SLA terms.",isPPT:false,time:38},
+       {speaker:'supplier',text:"We're offering 99.5% uptime with a four-hour response window.",isPPT:false,time:65},
+       {speaker:'josh',text:"That uptime figure is the key number. Confirm the penalty structure too?",isPPT:true,time:98},
+       {speaker:'supplier',text:"For every hour beyond four hours you receive a 10% service credit.",isPPT:false,time:130},
+       {speaker:'kaya',text:"We should run this past legal before we commit.",isPPT:true,time:162},
+       {speaker:'josh',text:"Agreed. Contract amendment by Thursday?",isPPT:false,time:190},
+       {speaker:'supplier',text:"I'll have it over by Thursday EOD including the full SLA schedule.",isPPT:false,time:215},
+       {speaker:'kaya',text:"I'll block Friday for sign-off once legal have cleared it.",isPPT:false,time:240},
+       {speaker:'supplier',text:"5% volume discount available on a 24-month term.",isPPT:false,time:268},
+       {speaker:'kaya',text:"Worth flagging to finance before Friday.",isPPT:true,time:290},
+       {speaker:'josh',text:"Good catch. Let's reconvene Friday after legal sign-off.",isPPT:false,time:312},
+     ],
+     summary:'Vendor confirmed 99.5% uptime guarantee with 10% service credit for excess downtime. Kaya flagged penalty clause for legal review before Friday sign-off. A 24-month commitment unlocks 5% volume discount — flagged for finance. Contract amendment expected Thursday EOD.',
+     actions:[
+       {owner:'Supplier',action:'Send full contract amendment with SLA terms and credit schedule',deadline:'Thursday EOD'},
+       {owner:'Kaya',action:'Legal review of uptime and penalty clauses',deadline:'Friday AM'},
+       {owner:'Kaya',action:'Schedule Friday sign-off call',deadline:'Today'},
+       {owner:'Josh',action:'Check 24-month discount option with finance',deadline:'Thursday'},
+     ],
+     pptMoments:[
+       {speaker:'Josh',text:"That uptime figure is the key number. Confirm the penalty structure too?",time:'00:01:38'},
+       {speaker:'Kaya',text:"We should run this past legal before we commit.",time:'00:02:42'},
+       {speaker:'Kaya',text:"Worth flagging to finance before Friday.",time:'00:04:50'},
+     ],
+     talkTime:{josh:38,kaya:34,supplier:28}},
+    {id:2,title:'Product Roadmap Sync',date:new Date(Date.now()-3600000),duration:1680,speakers:['josh','kaya'],shared:false,flagged:false,mine:true,
+     transcript:[],summary:'Team aligned on Q4 roadmap priorities. Three features deprioritised to focus on voice profile stability and search. Sprint planning scheduled for Monday.',
+     actions:[{owner:'Kaya',action:'Draft updated Q4 feature list',deadline:'Wednesday'},{owner:'Josh',action:'Communicate deprioritisation to stakeholders',deadline:'Friday'}],
+     pptMoments:[{speaker:'Kaya',text:"Voice profile stability is non-negotiable before any new feature work.",time:'00:12:04'}],
+     talkTime:{josh:52,kaya:48}},
+    {id:3,title:'Team Weekly Standup',date:new Date(Date.now()-86400000),duration:1260,speakers:['josh','kaya'],shared:true,flagged:false,mine:true,
+     transcript:[],summary:'No blockers reported. Josh confirmed vendor review productive. Kaya flagged potential delay on search index.',
+     actions:[{owner:'Josh',action:'Follow up on vendor SLA confirmation',deadline:'Thursday'},{owner:'Kaya',action:'Assess search index delay',deadline:'Tuesday'}],
+     pptMoments:[],talkTime:{josh:55,kaya:45}},
+    {id:4,title:'Client Onboarding Call',date:new Date(Date.now()-86400000-7200000),duration:2700,speakers:['josh'],shared:true,flagged:true,mine:true,
+     transcript:[],summary:'Initial onboarding with enterprise client. Data residency and audit logging raised as hard requirements. Technical proposal requested within two weeks.',
+     actions:[{owner:'Josh',action:'Prepare technical proposal',deadline:'Two weeks'},{owner:'Josh',action:'Confirm GDPR data residency options with engineering',deadline:'Next week'},{owner:'Josh',action:'Send welcome pack',deadline:'Today'}],
+     pptMoments:[{speaker:'Josh',text:"Data residency in the UK is a hard requirement.",time:'00:18:32'},{speaker:'Josh',text:"They've asked specifically about audit logging.",time:'00:31:07'}],
+     talkTime:{josh:65,client:35}},
+  ];
+  S.cur=S.meetings[0];
+}
+
+function renderLib(){
+  const list=document.getElementById('lib-list'); list.innerHTML='';
+  const term=S.search.toLowerCase(),f=S.filter;
+  let tod=[],yes=[],old=[];
+  const now=new Date();
+  S.meetings.forEach(m=>{
+    if(term && !m.title.toLowerCase().includes(term)) return;
+    if(f==='mine'&&!m.mine)return;
+    if(f==='flag'&&!m.flagged)return;
+    if(f==='share'&&!m.shared)return;
+    const d=m.date.toDateString();
+    if(d===now.toDateString())tod.push(m);
+    else if(d===new Date(now-86400000).toDateString())yes.push(m);
+    else old.push(m);
+  });
+  if(!S.meetings.length){list.innerHTML=`<div class="empty"><div class="empty-icon">🎙️</div><div class="empty-txt">No meetings yet.<br>Tap the mic button to record your first meeting.</div></div>`;return;}
+  if(!tod.length&&!yes.length&&!old.length){list.innerHTML=`<div class="empty"><div class="empty-icon">🔍</div><div class="empty-txt">No meetings match your search.</div></div>`;return;}
+  if(tod.length){list.innerHTML+='<div class="lbl" style="margin-top:4px;">Today</div>';tod.forEach(m=>list.appendChild(mkCard(m)));}
+  if(yes.length){list.innerHTML+='<div class="lbl">Yesterday</div>';yes.forEach(m=>list.appendChild(mkCard(m)));}
+  if(old.length){list.innerHTML+='<div class="lbl">Earlier</div>';old.forEach(m=>list.appendChild(mkCard(m)));}
+}
+
+function mkCard(m){
+  const wrap=document.createElement('div'); wrap.className='mc-wrap';
+  const mc=document.createElement('div');
+  mc.className='mc fi'+(m.id===S.cur?.id?' sel':'');
+  mc.style.marginBottom='0';
+  const t=m.date.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  const badges=[m.shared?'<span class="pill p-green" style="font-size:9px;">Shared</span>':'',m.flagged?'<span class="pill p-amber" style="font-size:9px;">Flagged</span>':''].filter(Boolean).join('');
+  const pN=(m.pptMoments||[]).length,aN=(m.actions||[]).length;
+  mc.innerHTML=`
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px;">
+      <div style="font-size:14px;font-weight:600;color:var(--txt);flex:1;">${m.title}</div>
+      <div style="display:flex;gap:3px;">${badges}</div>
+    </div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--txt4);">${t} · ${fmtDur(m.duration)} · ${m.speakers.length} speaker${m.speakers.length>1?'s':''}</div>
+    <div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;">
+      ${aN?`<span class="pill p-pur" style="font-size:9px;">${aN} action${aN>1?'s':''}</span>`:''}
+      ${pN?`<span class="pill p-dim" style="font-size:9px;">${pN} PPT${pN>1?' moments':' moment'}</span>`:''}
+    </div>`;
+  // Swipe to delete
+  let sx=0;
+  mc.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;},{passive:true});
+  mc.addEventListener('touchmove',e=>{const dx=sx-e.touches[0].clientX;if(dx>44)wrap.classList.add('sw');else if(dx<-20)wrap.classList.remove('sw');},{passive:true});
+  mc.onclick=()=>{
+    if(wrap.classList.contains('sw')){wrap.classList.remove('sw');return;}
+    S.cur=m;
+    document.getElementById('sum-title').textContent=m.title;
+    document.getElementById('sum-meta').textContent=fmtDate(m.date)+' · '+fmtDur(m.duration)+' · '+m.speakers.length+' speaker'+(m.speakers.length>1?'s':'');
+    document.getElementById('sh-title').textContent=m.title;
+    document.getElementById('qa-m').textContent=m.title;
+    document.getElementById('flag-lbl').textContent=m.flagged?'Unflag':'Flag';
+    document.getElementById('ai-proc').style.display='none';
+    document.getElementById('qa-msgs').innerHTML='';
+    document.getElementById('qa-sqs').style.display='block';
+    renderSum(m,false);
+    go('s-sum'); setNav('nb-h');
+  };
+  const del=document.createElement('div'); del.className='mc-del'; del.textContent='Delete';
+  del.onclick=e=>{
+    e.stopPropagation();
+    confirm2('Delete meeting?',`"${m.title}" will be permanently removed.`,'Delete',()=>{
+      S.meetings=S.meetings.filter(x=>x.id!==m.id);
+      if(S.cur?.id===m.id)S.cur=S.meetings[0]||null;
+      renderLib();
+    },'Cancel');
+  };
+  wrap.appendChild(mc); wrap.appendChild(del); return wrap;
+}
+
+function filterLib(v){S.search=v;renderLib();}
+function setFil(f,btn){
+  S.filter=f;
+  document.querySelectorAll('[id^="fp-"]').forEach(b=>{b.className='pill p-dim';});
+  btn.className='pill p-pur';
+  renderLib();
+}
+
+// ═══════════════════════════════════════════
+// SUMMARY ACTIONS
+// ═══════════════════════════════════════════
+function togAct(i){
+  const c=document.getElementById('ck-'+i);
+  if(!c)return;
+  c.classList.toggle('on');
+  c.closest('.ai-item').classList.toggle('done');
+}
+function toggleFlag(){
+  const m=S.cur; if(!m)return;
+  m.flagged=!m.flagged;
+  document.getElementById('flag-lbl').textContent=m.flagged?'Unflag':'Flag';
+  toast(m.flagged?'🚩 Meeting flagged':'Flag removed');
+  renderLib();
+}
+function copySummary(){
+  const m=S.cur; if(!m)return;
+  let t=`${m.title}\n\n${m.summary}\n\nAction Items:\n`;
+  (m.actions||[]).forEach(a=>{t+=`• ${a.owner}: ${a.action}\n`;});
+  navigator.clipboard.writeText(t).then(()=>toast('Summary copied ✓')).catch(()=>toast('Copy failed'));
+}
+
+// ═══════════════════════════════════════════
+// SHARE
+// ═══════════════════════════════════════════
+function buildBody(){
+  const m=S.cur; if(!m)return'';
+  const tx=document.getElementById('t-tx').classList.contains('on');
+  const sm=document.getElementById('t-sum').classList.contains('on');
+  const ac=document.getElementById('t-act').classList.contains('on');
+  const pp=document.getElementById('t-ppt').classList.contains('on');
+  let b=`📋 *${m.title}*\n${fmtDate(m.date)} · ${fmtDur(m.duration)}\n\n`;
+  if(sm&&m.summary)b+=`*Summary*\n${m.summary}\n\n`;
+  if(ac&&m.actions?.length){b+='*Action Items*\n';m.actions.forEach(a=>{b+=`• ${a.owner}: ${a.action}${a.deadline?' ('+a.deadline+')':''}\n`;});b+='\n';}
+  if(pp&&m.pptMoments?.length){b+='*PowerPoint Moments*\n';m.pptMoments.forEach(p=>{b+=`• "${p.text}" — ${p.speaker}\n`;});b+='\n';}
+  if(tx&&m.transcript?.length){b+='*Transcript*\n';m.transcript.forEach(l=>{b+=`${SPK[l.speaker]?.name||l.speaker}: ${l.text}\n`;});}
+  b+='\nShared via DeepTalk AI Meeting Intelligence';
+  return b;
+}
+function doShare(ch){
+  const m=S.cur; if(!m)return;
+  const body=buildBody();
+  if(ch==='email')window.open(`mailto:?subject=${encodeURIComponent('Meeting Notes: '+m.title)}&body=${encodeURIComponent(body)}`);
+  else if(ch==='wa')window.open('https://wa.me/?text='+encodeURIComponent(body));
+  else if(ch==='gc')navigator.clipboard.writeText(body).then(()=>{toast('Copied for Google Chat');});
+  else if(ch==='link'){
+    const url=`https://deeptalk.app/m/${m.id}`;
+    navigator.clipboard.writeText(url).then(()=>{
+      document.getElementById('link-ok').style.display='block';
+      document.getElementById('link-arr').style.display='none';
+      setTimeout(()=>{document.getElementById('link-ok').style.display='none';document.getElementById('link-arr').style.display='block';},2200);
+    }).catch(()=>toast('Link: deeptalk.app/m/'+m.id));
+  }
+  if(m&&!m.shared){m.shared=true;renderLib();}
+  showShDone(ch==='email'?'Opened in your mail client':ch==='wa'?'Opened in WhatsApp':ch==='gc'?'Copied for Google Chat':'Link copied');
+}
+function showShDone(msg){
+  const el=document.getElementById('sh-done'); el.style.display='block';
+  document.getElementById('sh-done-txt').textContent=msg;
+  setTimeout(()=>el.style.display='none',4000);
+}
+function doExport(t){
+  const m=S.cur; if(!m)return;
+  let c=`# ${m.title}\n${fmtDate(m.date)} · ${fmtDur(m.duration)}\n\n## Summary\n${m.summary||''}\n\n## Action Items\n`;
+  (m.actions||[]).forEach(a=>{c+=`- [ ] ${a.owner}: ${a.action}${a.deadline?' → '+a.deadline:''}\n`;});
+  c+=`\n## PowerPoint Moments\n`;
+  (m.pptMoments||[]).forEach(p=>{c+=`- "${p.text}" — ${p.speaker}${p.time?' ('+p.time+')':''}\n`;});
+  c+=`\n## Full Transcript\n`;
+  (m.transcript||[]).forEach(l=>{c+=`**${SPK[l.speaker]?.name||l.speaker}** (${fmtTime(l.time||0)}): ${l.text}\n\n`;});
+  const blob=new Blob([c],{type:'text/plain'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=(m.title||'meeting').replace(/\s+/g,'_')+'.'+t; a.click();
+  toast('Exported ✓');
+}
+
+// ═══════════════════════════════════════════
+// Q&A
+// ═══════════════════════════════════════════
+async function sendQ(){
+  const inp=document.getElementById('qa-inp');
+  const q=inp.value.trim(); if(!q)return;
+  inp.value='';
+  document.getElementById('qa-sqs').style.display='none';
+  addBubble('u',q);
+  const th=addBubble('th','');
+  const m=S.cur;
+  const ctx=(m?.transcript||[]).map(l=>`${SPK[l.speaker]?.name||l.speaker}: ${l.text}`).join('\n')||
+    'Q3 Vendor Review. Supplier confirmed 99.5% uptime SLA, 10% credit per excess hour. Kaya flagged legal review. 24-month discount available. Contract amendment by Thursday.';
+  try{
+    const ans=await callAI(`You are DeepTalk, an AI meeting assistant. Answer this question about the meeting concisely (2-4 sentences). Cite speaker names.\n\nTranscript:\n${ctx}\n\nQuestion: ${q}`);
+    th.remove(); addBubble('a',ans);
+  }catch(e){th.remove();addBubble('a',demoQA(q));}
+}
+function askQ(el){document.getElementById('qa-inp').value=el.textContent;sendQ();}
+function addBubble(t,txt){
+  const w=document.getElementById('qa-msgs');
+  const el=document.createElement('div');
+  if(t==='u'){el.className='cb-u';el.textContent=txt;}
+  else if(t==='a'){el.className='cb-a';el.innerHTML=`<div>${txt}</div>`;}
+  else{el.className='cb-a';el.innerHTML='<div class="thinking"><span></span><span></span><span></span></div>';}
+  w.appendChild(el); w.scrollTop=w.scrollHeight; return el;
+}
+function demoQA(q){
+  const map={
+    agree:'The team agreed on a 99.5% uptime SLA with 10% service credit per excess hour. Sign-off is pending legal review, owned by Kaya.',
+    action:'Four items: Supplier sends contract amendment (Thursday EOD), Kaya does legal review (Friday AM), Kaya schedules sign-off call (today), Josh checks 24-month discount with finance.',
+    powerpoint:'Three PowerPoint moments were flagged: the 99.5% uptime figure (Josh, 00:01:38), Kaya\'s call for legal review (00:02:42), and the 24-month volume discount (Kaya, 00:04:50).',
+    decision:'Key decisions: proceed to legal review before committing, request contract amendment by Thursday, hold sign-off call Friday afternoon.',
+    legal:'Kaya Hegarty owns the legal review with a Friday morning deadline — specifically reviewing the penalty clause and uptime terms.',
+    discount:'The supplier offered a 5% discount for a 24-month commitment. Kaya flagged this as a PowerPoint moment for finance review.',
+    summary:'Q3 Vendor Review covered SLA terms (99.5% uptime, 10% credit), a 24-month volume discount, and legal review requirements before sign-off.',
+  };
+  const l=q.toLowerCase();
+  for(const [k,v] of Object.entries(map))if(l.includes(k))return v;
+  return 'Based on the transcript, the meeting focused on Q3 vendor SLA terms including 99.5% uptime and 10% service credit for excess downtime. Key next steps: legal review by Friday AM and contract amendment by Thursday EOD.';
+}
+
+// ═══════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════
+function renderDash(){
+  const spkDiv=document.getElementById('d-spk');
+  if(spkDiv){
+    spkDiv.innerHTML=[{n:'Josh Hegarty',c:'var(--pur)',p:34},{n:'Kaya Hegarty',c:'var(--teal2)',p:27},{n:'Others',c:'var(--txt4)',p:39}]
+      .map(s=>`<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><div style="display:flex;align-items:center;gap:6px;"><span style="width:7px;height:7px;border-radius:50%;background:${s.c};display:inline-block;"></span><span style="font-size:12px;">${s.n}</span></div><span style="font-family:var(--mono);font-size:10px;color:var(--txt4);">${s.p}%</span></div><div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${s.p}%;background:${s.c};border-radius:3px;"></div></div></div>`).join('');
+  }
+  const dm=document.getElementById('d-meet');
+  if(dm){dm.innerHTML='';S.meetings.slice(0,4).forEach(m=>dm.appendChild(mkCard(m)));}
+  // Speech status
+  const ds=document.getElementById('d-speech');
+  if(ds){
+    ds.innerHTML=S.speechAvail
+      ?`<div style="display:flex;align-items:center;gap:10px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;"></div><div><div style="font-size:13px;font-weight:600;color:var(--txt);">Live speech recognition active</div><div style="font-size:11px;color:var(--txt4);margin-top:2px;">Web Speech API · Chrome/Edge · Real-time transcription</div></div></div>`
+      :`<div style="display:flex;align-items:center;gap:10px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0;"></div><div><div style="font-size:13px;font-weight:600;color:var(--txt);">Demo mode</div><div style="font-size:11px;color:var(--txt4);margin-top:2px;">Speech API unavailable. Use Chrome or Edge for live transcription.</div></div></div>`;
+  }
+}
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+function togBtn(b){b.classList.toggle('on');b.classList.toggle('off');}
+function fmtTime(s){const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60;return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`;}
+function fmtDur(s){if(!s)return'0 min';const m=Math.floor(s/60);return m>60?Math.floor(m/60)+'h '+(m%60)+'min':m+' min';}
+function fmtDate(d){const t=new Date();if(d.toDateString()===t.toDateString())return'Today';if(d.toDateString()===new Date(t-86400000).toDateString())return'Yesterday';return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});}
+function demoSum(){return'Vendor confirmed 99.5% uptime guarantee with 10% service credit for excess downtime. Kaya flagged the penalty clause for legal review before Friday sign-off. A 24-month commitment unlocks a 5% volume discount — flagged for finance review. Contract amendment expected Thursday EOD.';}
+function demoActs(){return[{owner:'Supplier',action:'Send full contract amendment with SLA terms and credit schedule',deadline:'Thursday EOD'},{owner:'Kaya',action:'Legal review of uptime and penalty clauses',deadline:'Friday AM'},{owner:'Kaya',action:'Schedule Friday afternoon sign-off call',deadline:'Today'},{owner:'Josh',action:'Check 24-month volume discount with finance',deadline:'Thursday'}];}
+function toast(msg){
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.getElementById('app').appendChild(t); setTimeout(()=>t.remove(),2200);
+}
+function confirm2(title,sub,ok,fn,cancel='Cancel'){
+  const ov=document.createElement('div'); ov.className='conf-ov';
+  ov.innerHTML=`<div class="conf-box"><div class="conf-title">${title}</div><div class="conf-sub">${sub}</div><div style="display:flex;gap:8px;"><button class="btn btn-g" style="flex:1;" id="cc">${cancel}</button><button class="btn btn-p" style="flex:1;" id="co">${ok}</button></div></div>`;
+  document.getElementById('app').appendChild(ov);
+  document.getElementById('cc').onclick=()=>ov.remove();
+  document.getElementById('co').onclick=()=>{ov.remove();fn();};
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+}
+</script>
+</body>
+</html>
