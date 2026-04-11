@@ -1,0 +1,17 @@
+{
+  "name": "@deeptalk/database",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "generate-types": "supabase gen types typescript --project-id otqtbbjaiywowgocbbfg > src/types.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "supabase": "^1.200.3",
+    "typescript": "^5.5.0"
+  }
+}

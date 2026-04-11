@@ -1,0 +1,13 @@
+{
+  "name": "deeptalk",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @deeptalk/web dev",
+    "build": "pnpm --filter @deeptalk/web build",
+    "lint": "pnpm -r lint",
+    "db:generate-types": "pnpm --filter @deeptalk/database generate-types"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "DeepTalk",
+    "slug": "deeptalk-mobile",
+    "version": "1.0.0",
+    "scheme": "deeptalk",
+    "platforms": ["ios", "android"],
+    "newArchEnabled": true
+  }
+}

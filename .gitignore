@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+
+# build
+.next/
+dist/
+.expo/
+*.tsbuildinfo
+
+# environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Supabase
+supabase/.temp/
+
+# misc
+*.log
